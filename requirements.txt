@@ -1,0 +1,4 @@
+jupyterlab
+seaborn
+scipy
+pandas
