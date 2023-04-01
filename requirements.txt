@@ -1,4 +1,4 @@
-jupyterlab
+ipykernel
 seaborn
 scipy
 pandas
