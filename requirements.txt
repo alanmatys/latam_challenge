@@ -2,3 +2,4 @@ ipykernel
 seaborn
 scipy
 pandas
+geopy
