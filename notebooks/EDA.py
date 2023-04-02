@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[8]:
+# In[13]:
 
 
 import pandas as pd
@@ -14,7 +14,7 @@ import numpy as np
 import os
 
 
-# In[10]:
+# In[14]:
 
 
 def read_df():
@@ -45,14 +45,14 @@ def read_df():
     return df
 
 
-# In[5]:
+# In[15]:
 
 
 df = read_df()
 df.head()
 
 
-# In[6]:
+# In[16]:
 
 
 def synthetic_features(df):
@@ -130,7 +130,7 @@ def synthetic_features(df):
     return df
 
 
-# In[348]:
+# In[17]:
 
 
 df = synthetic_features(df)
@@ -143,7 +143,7 @@ df.head()
 
 # ### Categorical Features
 
-# In[7]:
+# In[195]:
 
 
 def programed_vs_operated(df:pd.DataFrame):
@@ -190,10 +190,10 @@ def programed_vs_operated(df:pd.DataFrame):
                 alpha=0.7)
     axes[1,1].tick_params(axis='x', rotation=90)
 
-    dis_des = len(df[df['Des-I'] != df['Des-O']])
+    dis_des = round((len(df[df['Des-I'] != df['Des-O']])/len(df)) * 100,2)
 
     axes[1,1].text(.4, .70,
-                    f'There are {dis_des} flights that ended on a different destination',
+                    f'{dis_des}% of the flights that ended on a different destination',
                     ha='left',
                     va='top',
                     color='blue',
@@ -213,10 +213,10 @@ def programed_vs_operated(df:pd.DataFrame):
                 alpha=0.7)
     axes[2,1].tick_params(axis='x', rotation=90)
 
-    dis_emp = len(df[df['Emp-I'] != df['Emp-O']])
+    dis_emp = round((len(df[df['Emp-I'] != df['Emp-O']])/len(df)) * 100,2)
 
     axes[2,1].text(.4, .70,
-                    f'There are {dis_emp} flights that have a diifferent Airline Code',
+                    f'{dis_emp}% of the flights that have a diifferent Airline Code',
                     ha='left',
                     va='top',
                     color='blue',
@@ -225,20 +225,24 @@ def programed_vs_operated(df:pd.DataFrame):
     plt.show()
 
 
-# In[350]:
+# In[196]:
 
 
 programed_vs_operated(df)
 
 
-# In[352]:
+# From this chart we can take the following insights
+# - It seems that it's very common to have a different Airline Code Operated.
+# - There are some flights, not usually, that ended on a different destination, based on the destination code
+
+# In[19]:
 
 
 def other_categorical(df):
     """
     
     """
-    fig, axes = plt.subplots(nrows=2, ncols=2, figsize = (20,4))
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize = (20,6))
 
     sns.histplot(x=df["TIPOVUELO"],
                     multiple="dodge", 
@@ -275,10 +279,103 @@ def other_categorical(df):
     plt.show()
 
 
-# In[353]:
+# In[20]:
 
 
 other_categorical(df)
+
+
+# The distribution of flights its
+
+# In[187]:
+
+
+def time_s_airlines(df):
+    """
+    
+    """
+    fig,ax = plt.subplots(nrows = 4,figsize=(20,28))
+
+    plot = df.groupby([df['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+
+    sns.lineplot(plot,x='Fecha-I',y='vuelos',hue='OPERA', ax= ax[0])
+
+    ax[0].set_title('Flights per Day for each Airline')
+    ax[0].set(xlabel=None)
+
+    sns.move_legend(
+    ax[0], loc="center left",
+    bbox_to_anchor=(1, .7), ncol=2, title=None
+    )
+
+
+    plot_2 = df[~df.OPERA.isin(['Grupo LATAM','Sky Airline'])].groupby([df['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+
+    sns.lineplot(plot_2,x='Fecha-I',y='vuelos',hue='OPERA', ax= ax[1])
+
+
+    sns.move_legend(
+    ax[1], loc="center left",
+    bbox_to_anchor=(1, .7), ncol=2, title=None
+    )
+
+    ax[1].set_title('Flights Excluding LATAM & Sky')
+    ax[1].set(xlabel=None)
+
+
+    df_nac = df[df['TIPOVUELO'] == 'N']
+
+    plot_nac = df_nac.groupby([df_nac['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+
+    sns.lineplot(plot_nac,x='Fecha-I',y='vuelos',hue='OPERA', ax=ax[2])
+
+    sns.move_legend(
+    ax[2], loc="center left",
+    bbox_to_anchor=(1, .9), ncol=2, title=None, fancybox=True, shadow=True
+    )
+
+
+    ax[2].set_title('Nac Flights')
+    ax[2].set(xlabel=None)
+
+
+    df_int = df[df['TIPOVUELO'] == 'I']
+
+    plot_int = df_int.groupby([df_int['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+
+    sns.lineplot(plot_int,x='Fecha-I',y='vuelos',hue='OPERA')
+
+    ax[3].set_title('Flights per Day for each Airline')
+    ax[3].set(xlabel=None)
+
+    sns.move_legend(
+    ax[3], loc="center left",
+    bbox_to_anchor=(1, .7), ncol=2, title=None
+    )
+
+    
+    plt.show()
+
+
+# In[188]:
+
+
+time_s_airlines(df)
+
+
+# In[100]:
+
+
+fig,ax = plt.subplots(figsize=(20,4))
+
+plot = df[df['SIGLADES'].isin(['Buenos Aires','Antofagasta','Lima','Calama','Puerto Montt'])].groupby([df['Fecha-I'].dt.date,df['SIGLADES']]).agg(vuelos = ('Vlo-I','count'))
+
+sns.lineplot(plot,x='Fecha-I',y='vuelos',hue='SIGLADES')
+
+sns.move_legend(
+    ax, "lower center",
+    bbox_to_anchor=(.5, 1), ncol=5, title=None, frameon=False,
+)
 
 
 # ## Continuous Features
@@ -286,7 +383,29 @@ other_categorical(df)
 # In[304]:
 
 
-#fig, axes = plt.subplots(nrows=)
-
 sns.displot(x=df['DIA'], bins=31)
+
+
+# In[ ]:
+
+
+def d
+
+# Define a function to geocode a city
+geolocator = Nominatim(user_agent="test_latam_airlines")
+geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+def get_coordinates(city):
+    location = geocode(city)
+    if location is not None:
+        return location.latitude, location.longitude
+    else:
+        return None, None
+
+# Add the latitude and longitude coordinates to the flight data
+#df['Origin_Lat'], df['Origin_Long'] = zip(*df['SIGLAORI'].apply_along_axis(get_coordinates))
+#df['Dest_Lat'], df['Dest_Long'] = zip(*df['SIGLADES'].apply(get_coordinates))
+
+#len(df['SIGLADES'].unique())
+arr = np.array(list(map(get_coordinates, df['SIGLADES'].unique())))
+print(arr)
 
