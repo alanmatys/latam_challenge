@@ -1,0 +1,5 @@
+name: latam_challenge
+
+dependencies:
+  - python>=3.9
+  - pip
