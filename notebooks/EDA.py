@@ -1,7 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[13]:
+# # EDA Latam Challenge!
+# 
+# ![Alt text](../docs/png-transparent-orlando-international-airport-latam-airlines-group-latam-chile-latam-brasil-logo-snapchat-purple-blue-violet.png)
+# 
+# - Author: Alan Matys
+# - Linkedin: https://www.linkedin.com/in/alanmatys/
+
+# In[391]:
 
 
 import pandas as pd
@@ -9,12 +16,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
-from geopy.distance import distance
+from geopy.distance import distance as geodesic_distance
 import numpy as np
 import os
 
 
-# In[14]:
+# In[392]:
 
 
 def read_df():
@@ -41,18 +48,22 @@ def read_df():
     if df.isnull().any().any():
 
         print('There is/are NaN in these Rows\n',df.isnull().any())
+    
+    if df.duplicated().sum():
+
+        print('There is/are duplicanted',df.duplicated().sum(),' rows')
 
     return df
 
 
-# In[15]:
+# In[393]:
 
 
 df = read_df()
 df.head()
 
 
-# In[16]:
+# In[394]:
 
 
 def synthetic_features(df):
@@ -130,7 +141,7 @@ def synthetic_features(df):
     return df
 
 
-# In[17]:
+# In[395]:
 
 
 df = synthetic_features(df)
@@ -143,7 +154,7 @@ df.head()
 
 # ### Categorical Features
 
-# In[195]:
+# In[396]:
 
 
 def programed_vs_operated(df:pd.DataFrame):
@@ -225,21 +236,32 @@ def programed_vs_operated(df:pd.DataFrame):
     plt.show()
 
 
-# In[196]:
+# In[397]:
 
 
 programed_vs_operated(df)
 
 
 # From this chart we can take the following insights
-# - It seems that it's very common to have a different Airline Code Operated.
+# - More than 1/4 flights had a different airline code from the one that was programed.
 # - There are some flights, not usually, that ended on a different destination, based on the destination code
 
-# In[19]:
+# In[398]:
 
 
 def other_categorical(df):
     """
+
+    Plot other categorical Variables of the LATAM Dataframe
+
+    Parameters
+    --------------------
+    df: pandas.Dataframe
+        Latam Dataframe containing the 'TIPOVUELO', 'DIANOM', 'SIGLADES', 'OPERA' columns
+
+    Returns
+    -------------------
+    None
     
     """
     fig, axes = plt.subplots(nrows=2, ncols=2, figsize = (20,6))
@@ -255,52 +277,80 @@ def other_categorical(df):
                     multiple="dodge", 
                     stat = 'percent',
                     shrink = 0.8,
-                    common_norm=False,
                     ax = axes[0,1],
-                    discrete=True)
+                    discrete=True,
+                    hue = df['TIPOVUELO'])
+
+    axes[0,1].get_legend().remove()
 
     sns.countplot(x=df['SIGLADES'],
                 ax = axes[1,0],
-                order = df['SIGLADES'].value_counts().index
+                order = df['SIGLADES'].value_counts().index,
+                hue= df['TIPOVUELO']
                 )
 
     axes[1,0].tick_params(axis='x', rotation=90)
+    axes[1,0].set(xlabel=None)
 
     sns.histplot(x=df["OPERA"],
                     multiple="dodge", 
                     stat = 'percent',
                     shrink = 0.8,
                     ax = axes[1,1],
-                    discrete=True)
+                    discrete=True,
+                    hue = df['TIPOVUELO'])
 
     axes[1,1].tick_params(axis='x', rotation=90)
+    axes[1,1].set(xlabel=None)
 
 
     plt.show()
 
 
-# In[20]:
+# In[399]:
 
 
 other_categorical(df)
 
 
-# The distribution of flights its
+# From this chart we can take the following insights:
+# - FROM Chart 1:
+# 
+# There are more National Flights (within Chile) than International Flights (from SCL to another country), but more or less is equivalent.
+# 
+# - From Chart 2:
+# 
+# International flights are uniform in terms of the day of the flight, but for National flights it's not the same, there are significantly fewer flights on Saturdays
+# 
+# - From Chart 3:
+# 
+# The top destination is Buenos Aires, the second place is for Antofagasta. On the top 10 flights most of them are national flights.
+# 
+# - From Chart 4:
+# 
+# Latam clearly dominates both National and International Flights in SCL. On second place we have Sky Airline with a significant market on National and some on International. With Latam & Sky we have ~ 80% of the flights
+# 
+# The others seem far from Top 2 players
+# 
 
-# In[187]:
+# ### Consistency of results in time
+# 
+# We examine if the dominance from both airlines and destinations has persisted in time for the full year or from certain perioid and on they gained full dominance.
+
+# In[400]:
 
 
-def time_s_airlines(df):
+def time_s_airlines(df, var):
     """
     
     """
     fig,ax = plt.subplots(nrows = 4,figsize=(20,28))
 
-    plot = df.groupby([df['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+    plot = df.groupby([df['Fecha-I'].dt.date,df[var]]).agg(vuelos = ('Vlo-I','count'))
 
-    sns.lineplot(plot,x='Fecha-I',y='vuelos',hue='OPERA', ax= ax[0])
+    sns.lineplot(plot,x='Fecha-I',y='vuelos',hue=var, ax= ax[0])
 
-    ax[0].set_title('Flights per Day for each Airline')
+    ax[0].set_title('Flights per Day')
     ax[0].set(xlabel=None)
 
     sns.move_legend(
@@ -309,9 +359,9 @@ def time_s_airlines(df):
     )
 
 
-    plot_2 = df[~df.OPERA.isin(['Grupo LATAM','Sky Airline'])].groupby([df['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+    plot_2 = df[~df.OPERA.isin(['Grupo LATAM','Sky Airline'])].groupby([df['Fecha-I'].dt.date,df[var]]).agg(vuelos = ('Vlo-I','count'))
 
-    sns.lineplot(plot_2,x='Fecha-I',y='vuelos',hue='OPERA', ax= ax[1])
+    sns.lineplot(plot_2,x='Fecha-I',y='vuelos',hue=var, ax= ax[1])
 
 
     sns.move_legend(
@@ -325,9 +375,9 @@ def time_s_airlines(df):
 
     df_nac = df[df['TIPOVUELO'] == 'N']
 
-    plot_nac = df_nac.groupby([df_nac['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+    plot_nac = df_nac.groupby([df_nac['Fecha-I'].dt.date,df[var]]).agg(vuelos = ('Vlo-I','count'))
 
-    sns.lineplot(plot_nac,x='Fecha-I',y='vuelos',hue='OPERA', ax=ax[2])
+    sns.lineplot(plot_nac,x='Fecha-I',y='vuelos',hue=var, ax=ax[2])
 
     sns.move_legend(
     ax[2], loc="center left",
@@ -341,11 +391,12 @@ def time_s_airlines(df):
 
     df_int = df[df['TIPOVUELO'] == 'I']
 
-    plot_int = df_int.groupby([df_int['Fecha-I'].dt.date,df['OPERA']]).agg(vuelos = ('Vlo-I','count'))
+    plot_int = df_int.groupby([df_int['Fecha-I'].dt.date,df[var]]).agg(vuelos = ('Vlo-I','count'))
 
-    sns.lineplot(plot_int,x='Fecha-I',y='vuelos',hue='OPERA')
+    sns.lineplot(plot_int,x='Fecha-I',y='vuelos',hue=var)
 
-    ax[3].set_title('Flights per Day for each Airline')
+
+    ax[3].set_title('Int Flights')
     ax[3].set(xlabel=None)
 
     sns.move_legend(
@@ -357,55 +408,115 @@ def time_s_airlines(df):
     plt.show()
 
 
-# In[188]:
+# In[401]:
 
 
-time_s_airlines(df)
+time_s_airlines(df,'OPERA')
 
 
-# In[100]:
+# In[403]:
 
 
-fig,ax = plt.subplots(figsize=(20,4))
-
-plot = df[df['SIGLADES'].isin(['Buenos Aires','Antofagasta','Lima','Calama','Puerto Montt'])].groupby([df['Fecha-I'].dt.date,df['SIGLADES']]).agg(vuelos = ('Vlo-I','count'))
-
-sns.lineplot(plot,x='Fecha-I',y='vuelos',hue='SIGLADES')
-
-sns.move_legend(
-    ax, "lower center",
-    bbox_to_anchor=(.5, 1), ncol=5, title=None, frameon=False,
-)
+time_s_airlines(df, 'SIGLADES')
 
 
 # ## Continuous Features
 
-# In[304]:
+# In[404]:
 
 
-sns.displot(x=df['DIA'], bins=31)
+sns.displot(x=df['DIANOM'],bins=12,hue=df['TIPOVUELO'])
 
 
-# In[ ]:
+# In[405]:
 
 
-def d
+sns.displot(x=df['MES'], bins=12,hue=df['SIGLADES'])
 
-# Define a function to geocode a city
-geolocator = Nominatim(user_agent="test_latam_airlines")
-geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
-def get_coordinates(city):
-    location = geocode(city)
-    if location is not None:
-        return location.latitude, location.longitude
-    else:
-        return None, None
 
-# Add the latitude and longitude coordinates to the flight data
-#df['Origin_Lat'], df['Origin_Long'] = zip(*df['SIGLAORI'].apply_along_axis(get_coordinates))
-#df['Dest_Lat'], df['Dest_Long'] = zip(*df['SIGLADES'].apply(get_coordinates))
+# In[406]:
 
-#len(df['SIGLADES'].unique())
-arr = np.array(list(map(get_coordinates, df['SIGLADES'].unique())))
-print(arr)
+
+sns.displot(x=df['DIA'], bins=31,hue=df['TIPOVUELO'])
+
+
+# ## Extra Features
+# 
+# We will add some features from the dataset and exogenous sources.
+# 
+
+# In[414]:
+
+
+def geo_data(df:pd.DataFrame):
+    """
+    Create a geo.csv file that has te distance between the origin city and the destination city
+
+    Parameters
+    ------------------------
+    df: pandas.DataFrame
+        Latam Challenge Dataframe containing the origin column and the destination column from each flight.
+    
+    """
+
+
+    # Check if the geo_features file exists, concat and return concated df
+    if os.path.exists(os.path.join('..','data','interim','geo_features.csv')):
+
+        df_geo = pd.read_csv(os.path.join('..','data','interim','geo_features.csv'))
+
+        df_out = df.merge(df_geo.loc[:,['Dest','Orig','distance','country_des']], left_on= ['SIGLADES','SIGLAORI'], right_on=['Dest','Orig'])
+        
+        return df_out
+
+    df_out = pd.DataFrame()
+    df_out['Dest'] = df['SIGLADES'].unique()
+    df_out['Orig'] = df['SIGLAORI'].unique().repeat(len(df['SIGLADES'].unique()))
+
+    # Define a function to geocode a city
+    geolocator = Nominatim(user_agent="test_latam_airlines")
+    geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+    
+    def get_coordinates(city):
+        location = geocode(city)
+        if location is not None:
+            return location.latitude, location.longitude
+        else:
+            return None, None
+    
+    
+    def get_country(coord):
+        location = geolocator.reverse(coord).raw['address']
+        if location is not None:
+            return location.get('country','')
+        else:
+            return None
+
+    #len(df['SIGLADES'].unique())
+    df_out['coord_ori'] = list(map(get_coordinates, df_out['Orig']))
+    df_out['coord_des'] = list(map(get_coordinates, df_out['Dest']))
+    df_out['country_des'] = list(map(get_country, df_out['coord_des']))
+
+    # Add the latitude and longitude coordinates to the flight data
+    df_out[['ori_lat','ori_long']] = pd.DataFrame(df_out['coord_ori'].tolist(), index=df_out.index)
+    df_out[['des_lat','des_long']] = pd.DataFrame(df_out['coord_des'].tolist(), index=df_out.index)
+
+
+    # Calculate distance between cities
+    df_out["distance"] = df_out.apply(lambda row: geodesic_distance(row['coord_ori'], row['coord_des']).km, axis=1)
+
+    # Save to geo_features
+    df_out.to_csv(os.path.join('..','data','interim','geo_features.csv'), index=False)
+    
+
+    df.merge(df_out.loc[:,['Dest','Orig','distance','country_des']], left_on= ['SIGLADES','SIGLAORI'], right_on=['Dest','Orig'])
+
+    return df
+
+
+# In[415]:
+
+
+df_geo = geo_data(df)
+df_geo.head()
 
