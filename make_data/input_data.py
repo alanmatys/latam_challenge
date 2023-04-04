@@ -4,6 +4,7 @@ import numpy as np
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 from geopy.distance import distance as geodesic_distance
+import requests
 
 
 def read_df():
@@ -31,10 +32,16 @@ def read_df():
     if df.isnull().any().any():
         print("There is/are NaN in these Rows\n", df.isnull().any())
 
+        print('The row that has the NaN is:\n', df[df.isnull().any(axis=1)])
+
     if df.duplicated().sum():
         print("There is/are duplicanted", df.duplicated().sum(), " rows")
+    
+    else:
+        print("\nThere are no duplicate rows")
 
     return df
+
 
 
 
@@ -112,6 +119,8 @@ def synthetic_features(df):
 
     return df
 
+
+
 def geo_data(df:pd.DataFrame):
     """
     Create a geo.csv file that has te distance between the origin city and the destination city
@@ -129,10 +138,13 @@ def geo_data(df:pd.DataFrame):
 
         df_geo = pd.read_csv(os.path.join('..','data','interim','geo_features.csv'))
 
-        df_out = df.merge(df_geo.loc[:,['Dest','Orig','distance','country_des']], left_on= ['SIGLADES','SIGLAORI'], right_on=['Dest','Orig'])
+        df_out = df.merge(df_geo.loc[:,['Dest','Orig','distance','country_des','des_long','des_lat']], 
+                          left_on= ['SIGLADES','SIGLAORI'], 
+                          right_on=['Dest','Orig'])
         
         return df_out
 
+    # Create a dataframe, extract the unique destination and origin for the entire dataframe 
     df_out = pd.DataFrame()
     df_out['Dest'] = df['SIGLADES'].unique()
     df_out['Orig'] = df['SIGLAORI'].unique().repeat(len(df['SIGLADES'].unique()))
@@ -156,10 +168,29 @@ def geo_data(df:pd.DataFrame):
         else:
             return None
 
-    #len(df['SIGLADES'].unique())
+    # Get the coordinates for the destination, the origin and get the country of destination
     df_out['coord_ori'] = list(map(get_coordinates, df_out['Orig']))
     df_out['coord_des'] = list(map(get_coordinates, df_out['Dest']))
     df_out['country_des'] = list(map(get_country, df_out['coord_des']))
+    
+
+    # Correct the coordinates for the following destinations that recive the wrong ones
+    def correct_cord(row):
+        if row['Dest'] == 'Concepcion':
+            return (-36.82699, -73.04977)
+            
+        elif row['Dest'] == 'Osorno':
+            return (-40.57395, -73.13348)
+            
+        else:  
+            return row['coord_des']
+        
+    # Apply the correction to the coordinates column
+    df_out["coord_des"] = df_out.apply(correct_cord, axis=1)
+
+    # Correct the country for the Concepcion & Osorno destination that had an error
+    df_out['country_des'] = np.where((df_out['Dest'].isin(['Concepcion','Osorno'])),'Chile', df_out['country_des'])
+    
 
     # Add the latitude and longitude coordinates to the flight data
     df_out[['ori_lat','ori_long']] = pd.DataFrame(df_out['coord_ori'].tolist(), index=df_out.index)
@@ -172,7 +203,7 @@ def geo_data(df:pd.DataFrame):
     # Save to geo_features
     df_out.to_csv(os.path.join('..','data','interim','geo_features.csv'), index=False)
     
-
-    df.merge(df_out.loc[:,['Dest','Orig','distance','country_des']], left_on= ['SIGLADES','SIGLAORI'], right_on=['Dest','Orig'])
+    # merge to the input df
+    df = df.merge(df_out.loc[:,['Dest','Orig','distance','country_des','des_long','des_lat']], left_on= ['SIGLADES','SIGLAORI'], right_on=['Dest','Orig'])
 
     return df
