@@ -1,13 +1,11 @@
 latam_challenge-documentation-test
 ==============================
 
-This project constitutes a small demonstration on model documentation using data from t
-
-The goal of this project is to develop a supervised machine learning model to solve the classification problem of detecting individuals with annual incomes above 50K USD.
+The problem consists in predicting the probability of delay of the flights that land or take off from the airport of Santiago de Chile (SCL).
 
 ## The Dataset
 
-The problem consists in predicting the probability of delay of the flights that land or take off from the airport of Santiago de Chile (SCL). Each row corresponds to a flight that landed or took off from SCL during 2017. And has been uploaded  into the [data/raw](https://github.com/nelson-io/citi-documentation-test/tree/main/data/raw) The following information is available for each flight:
+ Each row corresponds to a flight that landed or took off from SCL during 2017. And has been uploaded  into the [data/raw](https://github.com/nelson-io/citi-documentation-test/tree/main/data/raw) The following information is available for each flight:
 
 * **Fecha-I**: datetime, Scheduled date and time of the flight.
 * **Vlo-I**: int, Scheduled flight number.
