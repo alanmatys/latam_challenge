@@ -25,3 +25,28 @@ The problem consists in predicting the probability of delay of the flights that 
 * **OPERA**: Name of the airline that operates.
 * **SIGLAORI**: Name city of origin.
 * **SIGLADES**: Destination city name.
+
+
+Project Organization
+------------
+
+
+    
+    ├── README.md          <- The top-level README for developers using this project.
+    ├── data
+    │   ├── interim        <- Intermediate data that has been transformed.
+    │   └── raw            <- The original, immutable data dump.
+    │
+    ├── models             <- Trained and serialized models, model predictions, or model summaries
+    │
+    ├── notebooks          <- Jupyter notebook with solutions.ipynb and solutions.py (To evaluate changes in commits/push)
+    │
+    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
+    │                         generated with `pip freeze > requirements.txt`
+    │
+    │
+    ├── make_data           <- Scripts to download or generate data
+    │        ├── __init__.py
+    │        └── input_data.py
+    │
+    └── docs               <- documentation of the assignment
