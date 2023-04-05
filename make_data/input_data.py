@@ -124,7 +124,7 @@ def synthetic_features(df):
 
 def geo_data(df:pd.DataFrame):
     """
-    Create a geo.csv file that has te distance between the origin city and the destination city
+    Create a geo.csv file that has te distance between the origin city and the destination city & if the that day was a holiday day in Chile
 
     Parameters
     ------------------------
@@ -138,38 +138,11 @@ def geo_data(df:pd.DataFrame):
     - Saves geo_data as csv into the data/interim folder
 
     """
-    # Correct the coordinates for the following destinations that recive the wrong ones
-    def correct_cord(row):
-        if row['Dest'] == 'Concepcion':
-            return (-36.82699, -73.04977)
-            
-        elif row['Dest'] == 'Osorno':
-            return (-40.57395, -73.13348)
-        
-        elif row['Dest'] == 'Ushuia':
-            return (-54.8, -68.3)
-
-        elif row['Dest'] == 'Curitiba, Bra.':
-            return (-25.441105, -49.276855)
-        
-        elif row['Dest'] == 'San Juan, Arg.':
-            return (-31.5375, -68.53639)
-
-        else:  
-            return row['coord_des']
 
     # Check if the geo_features file exists, concat and return concated df
     if os.path.exists(os.path.join('..','data','interim','geo_features.csv')):
 
         df_geo = pd.read_csv(os.path.join('..','data','interim','geo_features.csv'))
-
-        # Apply the correction to the coordinates column
-        df_geo["coord_des"] = df_geo.apply(correct_cord, axis=1)
-
-        # Correct the country for the Concepcion & Osorno destination that had an error
-        df_geo['country_des'] = np.where((df_geo['Dest'].isin(['Concepcion','Osorno'])),'Chile', df_geo['country_des'])
-        df_geo['country_des'] = np.where((df_geo['Dest'].isin(['Ushuia','San Juan, Arg.'])),'Argentina', df_geo['country_des'])
-        df_geo['country_des'] = np.where((df_geo['Dest'].isin(['Curitiba, Bra.'])),'Brasil', df_geo['country_des'])
 
         df_out = df.merge(df_geo.loc[:,['Dest','Orig','distance','country_des','des_long','des_lat']], 
                           left_on= ['SIGLADES','SIGLAORI'], 
