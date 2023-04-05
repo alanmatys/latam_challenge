@@ -5,6 +5,7 @@ from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 from geopy.distance import distance as geodesic_distance
 import requests
+import holidays
 
 
 def read_df():
@@ -129,18 +130,57 @@ def geo_data(df:pd.DataFrame):
     ------------------------
     df: pandas.DataFrame
         Latam Challenge Dataframe containing the origin column and the destination column from each flight.
-    
-    """
 
+    Returns
+    -----------------------
+    None
+    
+    - Saves geo_data as csv into the data/interim folder
+
+    """
+    # Correct the coordinates for the following destinations that recive the wrong ones
+    def correct_cord(row):
+        if row['Dest'] == 'Concepcion':
+            return (-36.82699, -73.04977)
+            
+        elif row['Dest'] == 'Osorno':
+            return (-40.57395, -73.13348)
+        
+        elif row['Dest'] == 'Ushuia':
+            return (-54.8, -68.3)
+
+        elif row['Dest'] == 'Curitiba, Bra.':
+            return (-25.441105, -49.276855)
+        
+        elif row['Dest'] == 'San Juan, Arg.':
+            return (-31.5375, -68.53639)
+
+        else:  
+            return row['coord_des']
 
     # Check if the geo_features file exists, concat and return concated df
     if os.path.exists(os.path.join('..','data','interim','geo_features.csv')):
 
         df_geo = pd.read_csv(os.path.join('..','data','interim','geo_features.csv'))
 
+        # Apply the correction to the coordinates column
+        df_geo["coord_des"] = df_geo.apply(correct_cord, axis=1)
+
+        # Correct the country for the Concepcion & Osorno destination that had an error
+        df_geo['country_des'] = np.where((df_geo['Dest'].isin(['Concepcion','Osorno'])),'Chile', df_geo['country_des'])
+        df_geo['country_des'] = np.where((df_geo['Dest'].isin(['Ushuia','San Juan, Arg.'])),'Argentina', df_geo['country_des'])
+        df_geo['country_des'] = np.where((df_geo['Dest'].isin(['Curitiba, Bra.'])),'Brasil', df_geo['country_des'])
+
         df_out = df.merge(df_geo.loc[:,['Dest','Orig','distance','country_des','des_long','des_lat']], 
                           left_on= ['SIGLADES','SIGLAORI'], 
                           right_on=['Dest','Orig'])
+
+        
+        # get the holidays in chile
+        cl_holidays = holidays.Chile()
+
+        # Apply to define a holiday
+        df_out['holiday'] = df_out['Fecha-I'].apply(lambda x: x in cl_holidays).astype(int)
         
         return df_out
 
@@ -153,6 +193,7 @@ def geo_data(df:pd.DataFrame):
     geolocator = Nominatim(user_agent="test_latam_airlines")
     geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
     
+    # Extract Longitude & Latitude from get_coordinates function using city name from geopy
     def get_coordinates(city):
         location = geocode(city)
         if location is not None:
@@ -160,7 +201,7 @@ def geo_data(df:pd.DataFrame):
         else:
             return None, None
     
-    
+    # Extract Country name from get_country function using coordinates (tuple) from geopy
     def get_country(coord):
         location = geolocator.reverse(coord).raw['address']
         if location is not None:
@@ -181,7 +222,16 @@ def geo_data(df:pd.DataFrame):
             
         elif row['Dest'] == 'Osorno':
             return (-40.57395, -73.13348)
-            
+        
+        elif row['Dest'] == 'Ushuia':
+            return (-54.8, -68.3)
+
+        elif row['Dest'] == 'Curitiba, Bra.':
+            return (-25.441105, -49.276855)
+        
+        elif row['Dest'] == 'San Juan, Arg.':
+            return (-31.5375, -68.53639)
+
         else:  
             return row['coord_des']
         
@@ -190,6 +240,8 @@ def geo_data(df:pd.DataFrame):
 
     # Correct the country for the Concepcion & Osorno destination that had an error
     df_out['country_des'] = np.where((df_out['Dest'].isin(['Concepcion','Osorno'])),'Chile', df_out['country_des'])
+    df_out['country_des'] = np.where((df_out['Dest'].isin(['Ushuia','San Juan, Arg.'])),'Argentina', df_out['country_des'])
+    df_out['country_des'] = np.where((df_out['Dest'].isin(['Curitiba, Bra.'])),'Brasil', df_out['country_des'])
     
 
     # Add the latitude and longitude coordinates to the flight data
@@ -205,5 +257,11 @@ def geo_data(df:pd.DataFrame):
     
     # merge to the input df
     df = df.merge(df_out.loc[:,['Dest','Orig','distance','country_des','des_long','des_lat']], left_on= ['SIGLADES','SIGLAORI'], right_on=['Dest','Orig'])
+
+    # get the holidays in chile
+    cl_holidays = holidays.Chile()
+
+    # Apply to define a holiday
+    df['holiday'] = df['Fecha-I'].apply(lambda x: x in cl_holidays).astype(int)
 
     return df
