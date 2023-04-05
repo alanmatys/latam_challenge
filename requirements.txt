@@ -3,3 +3,7 @@ seaborn
 scipy
 pandas
 geopy
+statsmodels
+holidays
+scikit-learn
+xgboost
