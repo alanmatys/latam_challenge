@@ -8,7 +8,7 @@
 # - Author: Alan Matys
 # - Linkedin: https://www.linkedin.com/in/alanmatys/
 
-# In[2]:
+# In[1]:
 
 
 # Import necesary libraries
@@ -23,7 +23,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-# In[3]:
+# In[2]:
 
 
 # We define the module path in order to be able to call the .py functions in the module
@@ -32,7 +32,7 @@ if module_path not in sys.path:
     sys.path.append(module_path)
 
 
-# In[4]:
+# In[3]:
 
 
 # We iimport the functions to read the csv file (read_df), add the synthetic_features (synthetic_features), and the geo data(geo_data)
@@ -40,7 +40,7 @@ if module_path not in sys.path:
 from make_data.input_data import read_df, synthetic_features, geo_data
 
 
-# In[5]:
+# In[4]:
 
 
 # We read the csv file
@@ -62,7 +62,7 @@ df.head()
 # 4) period_day : morning (between 5:00 and 11:59), afternoon (between 12:00 and 18:59) and night (between 19:00 and 4:59), based
 # onDate-I .
 
-# In[6]:
+# In[5]:
 
 
 df = synthetic_features(df)
@@ -76,7 +76,7 @@ df.head()
 # - distance: geodesic distance between the origin and the destination, using geopy data
 # - country_des: country of destination
 
-# In[7]:
+# In[6]:
 
 
 df = geo_data(df)
@@ -89,7 +89,7 @@ df.head()
 
 # ### Categorical Features
 
-# In[8]:
+# In[7]:
 
 
 def programed_vs_operated(df: pd.DataFrame):
@@ -388,7 +388,7 @@ def time_s_airlines(df, var):
     plt.show()
 
 
-# In[13]:
+# In[12]:
 
 
 time_s_airlines(df, "OPERA")
@@ -404,7 +404,7 @@ time_s_airlines(df, "OPERA")
 #
 # - **Int Flights:** LATAM dominates also international market but Sky is not that differenciated from the other players.
 
-# In[14]:
+# In[13]:
 
 
 time_s_airlines(df, "SIGLADES")
@@ -432,7 +432,7 @@ time_s_airlines(df, "country_des")
 #
 # We try some plots on the Numerical Features
 
-# In[14]:
+# In[15]:
 
 
 def plots(df, variable):
@@ -481,13 +481,7 @@ for i in ["DIA", "MES", "AÑO", "Vlo-O"]:
 #
 # - $ Delay = mindiff > 0 $
 
-# In[18]:
-
-
-sns.displot(data=df, x="min_diff", hue="holiday", kind="kde")
-
-
-# In[9]:
+# In[16]:
 
 
 def add_insights(df):
@@ -519,13 +513,13 @@ def add_insights(df):
     return df
 
 
-# In[10]:
+# In[17]:
 
 
 df = add_insights(df)
 
 
-# In[29]:
+# In[18]:
 
 
 def corr_plot(df):
@@ -563,7 +557,7 @@ def corr_plot(df):
     )
 
 
-# In[30]:
+# In[19]:
 
 
 corr_plot(df)
@@ -583,7 +577,7 @@ corr_plot(df)
 #
 # - **:** *AirCanada* also has delay on some days but they were not heavy delays Most of them were originated from January to March and in December
 
-# In[27]:
+# In[20]:
 
 
 plt.figure(figsize=(20, 10))
@@ -606,8 +600,38 @@ sns.heatmap(df.corr(method="spearman"), annot=True, cmap="coolwarm")
 # - Finially we optimize a pipeline for the final model, scale variables and finetune the hyperparameters for the best model.
 #
 # - Evaluation of results on a series of clasification metrics.
+#
+# **We will try to model BOTH delay variables, *delay* and *delay_15***
 
-# In[11]:
+# In[39]:
+
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 6))
+df.loc[:, df.columns == "delay"].value_counts().plot.pie(
+    explode=[0, 0.1], autopct="%1.1f%%", shadow=True, ax=ax1, title="Delay", fontsize=15
+)
+df.loc[:, df.columns == "delay_15"].value_counts().plot.pie(
+    explode=[0, 0.1],
+    autopct="%1.1f%%",
+    shadow=True,
+    ax=ax2,
+    title="Heavy Delay",
+    fontsize=15,
+)
+plt.show()
+
+
+# From the chart above we try to analyze if there is a sub sampling problem with the target variables.
+#
+# - **delay:**
+#     - Main Class is *delay* = 1, Delay
+#     - There is little umbalance so there is not a mayor issue
+#
+# - **delay_15:**
+#     - Main Class is *delay_15* = 0, Not heavy Delay
+#     - Clearly the clases are umbalanced so we will need to solve this issue some how
+
+# In[24]:
 
 
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
@@ -653,7 +677,7 @@ def encode_data(df, one_hot_cols, label_cols):
     return encoded_df
 
 
-# In[12]:
+# In[25]:
 
 
 encoded_df = encode_data(
@@ -687,7 +711,13 @@ encoded_df["des_long"] = encoded_df["des_long"].astype("float64")
 encoded_df["des_lat"] = encoded_df["des_lat"].astype("float64")
 
 
-# In[13]:
+# ### Model for Delay
+#
+# First we will try to model the *delay* variable.
+#
+# The target class is not severely umbalanced, so we won't use any method to correct that.
+
+# In[33]:
 
 
 from sklearn.model_selection import train_test_split
@@ -702,7 +732,7 @@ X = df_train.loc[:, ~encoded_df.columns.isin(["delay", "delay_15", "min_diff"])]
 y = df_train.loc[:, encoded_df.columns.isin(["delay"])]
 
 
-# In[17]:
+# In[32]:
 
 
 from sklearn.preprocessing import StandardScaler, LabelEncoder
@@ -728,7 +758,7 @@ from sklearn import metrics
 import pickle
 
 
-# In[18]:
+# In[82]:
 
 
 def comparacion_modelos(X, y):
@@ -799,17 +829,28 @@ def comparacion_modelos(X, y):
     plt.show()
 
 
-def XGboost(train):
+def XGboost(X, y, var):
     """
     Function to train the XGboost model for the prediction
     """
 
-    if os.path.exists(os.path.join("..", "models", "finalized_model.sav")):
+    if os.path.exists(os.path.join("..", "models", "finalized_model.sav")) & (
+        var == "delay"
+    ):
         cv_clf = pickle.load(
             open(os.path.join("..", "models", "finalized_model.sav"), "rb")
         )
 
         return cv_clf
+
+    if os.path.exists(os.path.join("..", "models", "heavy_delay_model.sav")) & (
+        var == "delay_15"
+    ):
+        cv_clf_hd = pickle.load(
+            open(os.path.join("..", "models", "heavy_delay_model.sav"), "rb")
+        )
+
+        return cv_clf_hd
 
     # Hyperparameters
     parameters = {
@@ -834,19 +875,12 @@ def XGboost(train):
     )
 
     # Training
-    cv_clf.fit(train.drop(columns=["delay", "delay_15", "min_diff"]), train["delay"])
+    cv_clf.fit(X, y)
     print(
         "The model that obtains the best results with these parameters"
         + str(cv_clf.best_params_)
     )
-    print(
-        "Train Score:"
-        + str(
-            cv_clf.score(
-                train.drop(columns=["delay", "delay_15", "min_diff"]), train["delay"]
-            )
-        )
-    )
+    print("Train Score:" + str(cv_clf.score(X, y)))
 
     return cv_clf
 
@@ -857,10 +891,10 @@ def XGboost(train):
 comparacion_modelos(X, y)
 
 
-# In[19]:
+# In[57]:
 
 
-get_ipython().run_cell_magic("time", "", "clf_xgb = XGboost(df_train)\n")
+get_ipython().run_cell_magic("time", "", "clf_xgb = XGboost(df_train,'delay')\n")
 
 
 # In[20]:
@@ -877,16 +911,7 @@ print(
 )
 
 
-# In[21]:
-
-
-# import pickle
-
-# filename = 'finalized_model.sav'
-# pickle.dump(clf_xgb, open(filename, 'wb'))
-
-
-# In[21]:
+# In[34]:
 
 
 def evaluate_model(model, x_test, y_test):
@@ -963,7 +988,7 @@ best_grid_xgb = clf_xgb.best_params_
 clf_xgb.best_params_
 
 
-# In[24]:
+# In[68]:
 
 
 xgbc = xgb.XGBClassifier(
@@ -988,3 +1013,112 @@ xgbc.fit(X, y)
 get_ipython().run_line_magic("matplotlib", "inline")
 fig, ax = plt.subplots(figsize=(10, 25))
 xgb.plot_importance(xgbc, ax=ax)
+
+
+# ### Model for Heavy Delay
+#
+# In this part we try to model de heavy delay, delay_15 variable from our dataset.
+
+# In[45]:
+
+
+from imblearn.over_sampling import SMOTE
+
+
+# In[75]:
+
+
+# Train / Test Separation
+df_train_hd, df_test_hd = train_test_split(encoded_df, test_size=0.25, random_state=46)
+
+
+X_hd = df_train_hd.loc[:, ~encoded_df.columns.isin(["delay", "delay_15", "min_diff"])]
+
+y_hd = df_train_hd.loc[:, encoded_df.columns.isin(["delay_15"])]
+
+
+# In order to have a balanced prediction we use SMOTE technique to balance the dataset
+#
+# - Smote Ref: https://towardsdatascience.com/smote-fdce2f605729#:~:text=SMOTE%20is%20a%20machine%20learning,with%20this%20type%20of%20data.
+
+# In[76]:
+
+
+# transform the dataset
+oversample = SMOTE()
+X_hd, y_hd = oversample.fit_resample(X_hd, y_hd)
+
+
+# In[53]:
+
+
+plt.pie(y_hd.value_counts(), explode=[0, 0.1], autopct="%1.1f%%", shadow=True)
+plt.show()
+
+
+# In[54]:
+
+
+comparacion_modelos(X_hd, y_hd)
+
+
+# In[83]:
+
+
+get_ipython().run_cell_magic(
+    "time", "", "clf_xgb_hd = XGboost(X_hd, y_hd, 'delay_15')\n"
+)
+
+
+# In[90]:
+
+
+# We evaluate the model
+best_grid_eval = evaluate_model(
+    clf_xgb_hd,
+    df_test_hd.drop(columns=["delay", "delay_15", "min_diff"]),
+    df_test_hd["delay_15"],
+)
+
+# Print result
+print("Accuracy:", (1 - best_grid_eval["acc"]))
+print("Precision:", best_grid_eval["prec"])
+print("Recall:", best_grid_eval["rec"])
+print("F1 Score:", best_grid_eval["f1"])
+print("Cohens Kappa Score:", best_grid_eval["kappa"])
+print("Area Under Curve:", best_grid_eval["auc"])
+
+
+# In[91]:
+
+
+# Parámetros óptimos
+best_grid_xgb = clf_xgb_hd.best_params_
+clf_xgb_hd.best_params_
+
+
+# In[92]:
+
+
+xgbc_hd = xgb.XGBClassifier(
+    learning_rate=best_grid_xgb["xgb__learning_rate"],
+    max_depth=best_grid_xgb["xgb__max_depth"],
+    n_estimators=best_grid_xgb["xgb__n_estimators"],
+    reg_lambda=best_grid_xgb["xgb__reg_lambda"],
+)
+
+
+# In[93]:
+
+
+# Hacemos un fit
+xgbc_hd.fit(X_hd, y_hd)
+
+
+# In[88]:
+
+
+# Feature Importance
+get_ipython().run_line_magic("matplotlib", "inline")
+fig, ax = plt.subplots(figsize=(10, 25))
+xgb.plot_importance(xgbc_hd, ax=ax)
